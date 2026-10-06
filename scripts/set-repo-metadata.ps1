@@ -83,14 +83,18 @@ function Invoke-GitHub {
 
 Write-Host "Repository: $Repo" -ForegroundColor Cyan
 
-# 1) Description (the "About" field)
+# 1) Description (the "About" field) and the repository feature toggles.
+#    has_projects is turned off deliberately: the repository has no project
+#    boards, and an empty Projects tab in the navigation is just noise.
 Invoke-GitHub -Method Patch -Uri "/repos/$Repo" -Body @{
-    description = $Description
-    has_issues  = $true
-    has_wiki    = $false
+    description  = $Description
+    has_issues   = $true
+    has_wiki     = $false
+    has_projects = $false
 } | Out-Null
 Write-Host '  description set' -ForegroundColor Green
 Write-Host "    $Description"
+Write-Host '  features: issues ON, wiki OFF, projects OFF' -ForegroundColor Green
 
 # 2) Topics (a separate endpoint, and it replaces the whole list)
 Invoke-GitHub -Method Put -Uri "/repos/$Repo/topics" -Body @{ names = $Topics } | Out-Null
@@ -106,3 +110,5 @@ Write-Host "  description: $($check.description)"
 Write-Host "  topics:      $($check.topics -join ', ')"
 Write-Host "  visibility:  $($check.visibility)"
 Write-Host "  issues:      $($check.has_issues)"
+Write-Host "  wiki:        $($check.has_wiki)"
+Write-Host "  projects:    $($check.has_projects)"
