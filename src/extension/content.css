@@ -1,0 +1,422 @@
+/* content.css — the panel on the reward queue page. Twitch dark theme:
+ * background #18181b / #1f1f23, accent #a970ff, text #efeff1.
+ *
+ * The panel fills the whole window and lives directly in <body>, outside the
+ * React tree: otherwise Twitch's SPA re-renders its subtree and wipes it.
+ *
+ * The layout is two columns, like Twitch's own panel: the reward list on the
+ * left (about 25% of the width), the claims of the selected reward on the right.
+ * Both columns scroll independently, so dozens of rewards do not stretch the
+ * panel.
+ *
+ * The height is capped: without it a long claim list grows over several screens
+ * and the panel stops being a panel. Therefore:
+ *   --tpr-max: the maximum panel height;
+ * Long content scrolls inside its own blocks.
+ *
+ * The panel is in the normal flow (position: absolute, the first element in
+ * <body>), so it scrolls with the page. It used to be pinned to the top and a
+ * spacer reserved room for it — which hid part of the claim list under the panel
+ * and made the page look unscrollable. Now there is nothing to reserve. */
+
+:root {
+  --tpr-max: 65vh;
+}
+
+/* ------------------------------------------------------------------ *
+ * Protection from Twitch's global styles.
+ *
+ * Twitch resets typography on bare span/div elements, so its own text is
+ * "treated" with an explicit line-height. Without such protection the text
+ * landed in the DOM with correct classes and colour but with a zero or wrong
+ * line height.
+ *
+ * WHAT IS DELIBERATELY ABSENT HERE: display and position.
+ * The reset used to contain `display: revert`, and that broke the layout itself:
+ * revert falls back to the browser default (block for a div), while the reset
+ * has the same specificity as the classes, so it overrode our own
+ * `display: flex`. The panel turned into a set of empty bars.
+ * Conclusion: a reset must not touch the properties the layout relies on.
+ * ------------------------------------------------------------------ */
+.tpr-root, .tpr-root * {
+  visibility: visible;
+  opacity: 1;
+  box-sizing: border-box;
+  font-family: Roobert, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #efeff1;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  word-break: normal;
+  vertical-align: baseline;
+}
+
+.tpr-root {
+  /* The panel fills the window and sits in the flow as the first element of
+     <body>, so it scrolls with the page. That way it does not cover Twitch's
+     claim list and needs no room reserved for itself. */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2147483000;
+  margin: 0;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;      /* scrolling happens inside the inner blocks */
+  background: #18181b;
+  color: #efeff1;
+  border-bottom: 2px solid #6441a5;
+  border-radius: 0;
+  font-family: Roobert, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Collapsed panel: shrinks to a single header line so Twitch's own interface
+   underneath is fully available. Without this the panel kept covering the whole
+   screen even when its contents were hidden. */
+.tpr-root.tpr-collapsed {
+  min-height: 0;
+}
+
+/* ---------- confirmation switch ---------- */
+
+.tpr-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+  padding: 0 4px;
+}
+.tpr-switch-input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #a970ff;
+  cursor: pointer;
+}
+.tpr-switch-state { font-weight: 700; }
+
+/* ---------- header ---------- */
+
+.tpr-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #1f1f23;
+  border-bottom: 1px solid #2f2f35;
+}
+.tpr-title { font-weight: 600; font-size: 14px; flex: 0 0 auto; }
+
+/* Version marker: shows which file is actually running */
+.tpr-version {
+  font-size: 10px;
+  color: #7d7d8a;
+  margin-left: 8px;
+  margin-right: auto;
+  font-family: Consolas, monospace;
+}
+.tpr-version-line {
+  margin-top: 8px;
+  font-size: 10px;
+  color: #5c5c68;
+  font-family: Consolas, monospace;
+}
+
+.tpr-head-right { display: flex; gap: 6px; flex: 0 0 auto; }
+
+.tpr-body {
+  padding: 10px;
+  overflow-y: auto;      /* scrolling inside the panel, not on the page */
+  flex: 1 1 auto;
+  min-height: 0;
+  /* The panel fills the window but the header sits on top, so the column height
+     is computed from what is left rather than from 100vh — otherwise an extra
+     scrollbar would appear. */
+  max-height: calc(100vh - 44px);
+}
+
+/* ---------- buttons ---------- */
+
+.tpr-btn {
+  background: #9147ff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.tpr-btn:hover:not(:disabled) { background: #772ce8; }
+.tpr-btn:disabled { opacity: .5; cursor: default; }
+.tpr-btn-small { padding: 4px 8px; font-size: 12px; }
+.tpr-btn-ghost { background: #2f2f35; }
+.tpr-btn-ghost:hover:not(:disabled) { background: #3a3a42; }
+
+/* ---------- status ---------- */
+
+.tpr-status {
+  padding: 7px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.tpr-status-idle { background: #1f1f23; color: #adadb8; }
+.tpr-status-work { background: #2b2340; color: #d9c7ff; }
+.tpr-status-ok   { background: #1c2d1f; color: #a8e6a3; }
+.tpr-status-err  { background: #3a1f22; color: #ffb3b3; }
+
+.tpr-warnings:empty { display: none; }
+.tpr-warning {
+  background: #3a331f;
+  color: #ffe0a3;
+  border-left: 3px solid #ffb84d;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+/* ---------- search ---------- */
+
+.tpr-search { display: flex; gap: 8px; margin-bottom: 8px; }
+.tpr-search-input {
+  flex: 1 1 auto;
+  background: #0e0e10;
+  border: 1px solid #3a3a42;
+  color: #efeff1;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.tpr-search-input:focus { outline: none; border-color: #a970ff; }
+.tpr-search-input:disabled { opacity: .5; }
+
+.tpr-suggest:empty { display: none; }
+
+.tpr-viewer-main { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* paging through the native panel to load the remaining pages */
+.tpr-paging { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+.tpr-paging:empty { display: none; }
+
+.tpr-suggest-box {
+  background: #1f1f23;
+  border: 1px solid #3a3a42;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.tpr-suggest-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: #dedee3;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.tpr-suggest-item:hover { background: #2f2f35; color: #fff; }
+
+/* ---------- messages ---------- */
+
+.tpr-message {
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.tpr-message-hint { background: #1f1f23; color: #adadb8; }
+.tpr-message-work { background: #2b2340; color: #d9c7ff; }
+.tpr-message-ok   { background: #1c2d1f; color: #a8e6a3; }
+.tpr-message-err  { background: #3a1f22; color: #ffb3b3; }
+.tpr-message-warn { background: #3a331f; color: #ffe0a3; border-left: 3px solid #ffb84d; }
+
+/* ---------- viewer card ---------- */
+
+.tpr-viewer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(90deg, #2b2340, #1f1f23);
+  border: 1px solid #6441a5;
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+.tpr-viewer-name { font-size: 18px; font-weight: 700; color: #fff; }
+.tpr-viewer-login { font-size: 11px; color: #adadb8; }
+.tpr-viewer-nums { text-align: right; }
+.tpr-viewer-count { font-size: 12px; color: #d9c7ff; }
+.tpr-viewer-sum { font-size: 18px; font-weight: 700; color: #fff; white-space: nowrap; }
+
+/* ---------- two columns: rewards on the left, contents on the right ---------- */
+
+.tpr-cols {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  min-height: 0;
+}
+
+/* Reward column — about a quarter of the width, like Twitch's own panel */
+.tpr-side {
+  flex: 0 0 25%;
+  max-width: 25%;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  max-height: 50vh;
+  padding-right: 4px;
+}
+
+.tpr-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tpr-side-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #adadb8;
+}
+
+/* Reward list item */
+.tpr-rewards { display: flex; flex-direction: column; gap: 4px; }
+
+.tpr-reward {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: #1f1f23;
+  border: 1px solid #2f2f35;
+  border-left: 3px solid transparent;
+  border-radius: 4px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  color: #efeff1;
+}
+.tpr-reward:hover { background: #26262c; }
+.tpr-reward-active {
+  background: #2b2340;
+  border-color: #6441a5;
+  border-left-color: #a970ff;
+}
+.tpr-reward-wide { margin-bottom: 4px; }
+
+.tpr-reward-title { font-weight: 600; color: #fff; }
+.tpr-reward-count { color: #adadb8; }
+
+/* Header of the selected reward */
+.tpr-main-head {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #2f2f35;
+}
+.tpr-main-title { font-weight: 700; color: #fff; }
+.tpr-main-sub { color: #adadb8; }
+.tpr-main-head .tpr-btn { margin-top: 8px; }
+
+.tpr-empty {
+  padding: 14px 4px;
+  color: #adadb8;
+}
+
+/* Claim table container: scrolls when there are many claims */
+.tpr-table-wrap {
+  overflow: auto;
+  min-height: 0;
+  max-height: 46vh;
+  border: 1px solid #2f2f35;
+  border-radius: 4px;
+  background: #0e0e10;
+}
+
+/* ---------- refund button for a claim ---------- */
+
+.tpr-td-act { text-align: right; white-space: nowrap; }
+
+.tpr-refund-btn {
+  background: #6441a5;
+  color: #efeff1;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.tpr-refund-btn:hover:not(:disabled) { background: #7a52c4; }
+.tpr-refund-btn:disabled { opacity: .55; cursor: default; }
+.tpr-refund-btn.tpr-refunded { background: #1c2d1f; color: #a8e6a3; }
+.tpr-refund-btn.tpr-refund-failed { background: #5a2a2a; color: #ffb3b3; }
+
+/* ---------- claim table ---------- */
+
+.tpr-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tpr-table th {
+  background: #18181b;
+  color: #adadb8;
+  text-align: left;
+  padding: 6px 10px;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #2f2f35;
+}
+.tpr-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #1c1c20;
+  color: #dedee3;
+  vertical-align: top;
+}
+.tpr-table tr:last-child td { border-bottom: none; }
+.tpr-td-date { white-space: nowrap; color: #adadb8; }
+/* Numbering of claims inside a reward: it makes counting refunds easy */
+.tpr-td-num {
+  width: 34px;
+  text-align: right;
+  color: #7d7d8a;
+  font-variant-numeric: tabular-nums;
+}
+.tpr-td-input {
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* YouTube links and the like are long strings without spaces. Without this
+     they stretch the table and break the panel width. */
+  overflow-wrap: anywhere;
+  color: #b9b9c4;
+}
+.tpr-td-id {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 11px;
+  color: #7d7d8a;
+  white-space: nowrap;
+}
+.tpr-muted { color: #5c5c68; }
