@@ -100,8 +100,8 @@ The `.gitignore` already excludes these, but double-check before the first push:
 - `ТЗ.md` — the original specification, written for one client.
 - `NOTES.md` — internal development notes with queue statistics.
 
-Run `git status` before committing. The repository was initialised by the author
-and the first commit contains exactly **22 files**:
+Run `git status` before committing. The first commit contains **22 files**, and
+after the maintainer-docs commit the tree holds **24**:
 
 ```
 .gitattributes                                dist/content.css
