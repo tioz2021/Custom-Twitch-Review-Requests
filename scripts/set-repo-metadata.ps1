@@ -3,10 +3,11 @@
 # WHY THIS SCRIPT EXISTS
 # The repository metadata (About text and Topics) can only be set through the
 # GitHub API or the web interface — it is not stored in the repository, so a
-# `git push` cannot carry it. This script fills both fields in one go.
+# `git push` cannot carry it. This script fills both fields in one go, and then
+# reads them back so the result is verified rather than assumed.
 #
-# The public mirror of the repository description and topics lives in
-# GITHUB_ABOUT.md; this script is the automated way to apply them.
+# The description and topic list are parameters with sensible defaults, so the
+# script works without arguments for this repository.
 #
 # USAGE
 #   1. Create a personal access token: https://github.com/settings/tokens

@@ -27,5 +27,15 @@ script. `-ExecutionPolicy Bypass` relaxes it for that single process only;
 system-wide, which this task does not need.
 
 The token is read with `Read-Host -AsSecureString`, used once, held only in
-memory and never written to disk. `GITHUB_ABOUT.md` holds the same text for
-copy-paste, in case you prefer to fill the fields in the browser.
+memory and never written to disk.
+
+The description text and the topic list are parameters of the script with
+sensible defaults, so it can be re-run after the repository is renamed or if the
+settings are ever reset. To use different values:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\set-repo-metadata.ps1 `
+    -Repo "OWNER/REPO" `
+    -Description "Your own description" `
+    -Topics twitch, chrome-extension
+```
