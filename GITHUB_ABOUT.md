@@ -2,6 +2,11 @@
 
 Copy-paste text for the GitHub repository settings.
 
+> These fields are not stored in the repository, so `git push` cannot apply them.
+> To set them automatically, run
+> `.\scripts\set-repo-metadata.ps1 -Repo "YOUR_USERNAME/Custom-Twitch-Review-Requests"`
+> — it also reads the values back to confirm they were stored.
+
 ---
 
 ## Repository name
@@ -95,8 +100,8 @@ The `.gitignore` already excludes these, but double-check before the first push:
 - `ТЗ.md` — the original specification, written for one client.
 - `NOTES.md` — internal development notes with queue statistics.
 
-Run `git status` before committing. The first commit should contain exactly
-**22 files**:
+Run `git status` before committing. The repository was initialised by the author
+and the first commit contains exactly **22 files**:
 
 ```
 .gitattributes                                dist/content.css
@@ -107,8 +112,8 @@ LICENSE                                       dist/icons/icon128.png
 README.md                                     dist/injected.js
 RELEASE_NOTES.md                              dist/manifest.json
 build.mjs                                     src/extension/content.css
-                                              src/extension/content.js
-                                              src/extension/injected.js
+scripts/README.md                             src/extension/content.js
+scripts/set-repo-metadata.ps1                 src/extension/injected.js
                                               src/extension/manifest.json
                                               src/extension/icons/icon16.png
                                               src/extension/icons/icon48.png
