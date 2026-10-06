@@ -2,10 +2,15 @@
 
 Copy-paste text for the GitHub repository settings.
 
-> These fields are not stored in the repository, so `git push` cannot apply them.
-> To set them automatically, run
-> `.\scripts\set-repo-metadata.ps1 -Repo "YOUR_USERNAME/Custom-Twitch-Review-Requests"`
-> — it also reads the values back to confirm they were stored.
+> **Status: applied and verified.**
+> Repository `tioz2021/Custom-Twitch-Review-Requests`, public, Issues enabled,
+> Wiki disabled. Description and all nine topics below were set with
+> `scripts/set-repo-metadata.ps1` and read back from the API to confirm.
+>
+> These fields are not stored in the repository, so `git push` cannot carry them.
+> To change them later, run
+> `powershell -ExecutionPolicy Bypass -File .\scripts\set-repo-metadata.ps1 -Repo "OWNER/REPO"`
+> or edit them in the browser.
 
 ---
 
