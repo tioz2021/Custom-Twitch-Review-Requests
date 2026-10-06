@@ -12,8 +12,17 @@
 #   1. Create a personal access token: https://github.com/settings/tokens
 #      Classic token with the `public_repo` scope is enough for a public repo.
 #   2. Run:
-#        .\scripts\set-repo-metadata.ps1 -Repo "YOUR_USERNAME/Custom-Twitch-Review-Requests"
+#        powershell -ExecutionPolicy Bypass -File .\scripts\set-repo-metadata.ps1 `
+#            -Repo "YOUR_USERNAME/Custom-Twitch-Review-Requests"
 #      and paste the token when prompted.
+#
+# WHY -ExecutionPolicy Bypass IS NEEDED
+# Windows blocks .ps1 files by default ("running scripts is disabled on this
+# system"), which is a machine-wide policy, not a problem with this script.
+# The Bypass flag relaxes it for THIS ONE PROCESS only. The alternative,
+# `Set-ExecutionPolicy RemoteSigned` at machine or user scope, would enable
+# script execution for everything on the system — a much bigger change than
+# this task needs.
 #
 # The token is used once, held only in memory, and never written to disk.
 
