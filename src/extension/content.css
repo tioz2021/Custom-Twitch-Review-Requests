@@ -395,6 +395,14 @@
   vertical-align: top;
 }
 .tpr-table tr:last-child td { border-bottom: none; }
+
+/* A claim that was already refunded stays in the table, dimmed.
+   It is kept rather than removed so the rows below it do not shift: with
+   removal, every refund renumbered the list and the panel appeared to jump to an
+   arbitrary claim. The row also shows what was done in this pass. */
+.tpr-row-refunded td { background: #0c0c0e; }
+.tpr-row-refunded .tpr-refund-btn { background: #1c2d1f; color: #a8e6a3; }
+
 .tpr-td-date { white-space: nowrap; color: #adadb8; }
 /* Numbering of claims inside a reward: it makes counting refunds easy */
 .tpr-td-num {

@@ -6,6 +6,32 @@ users do not have to clone the repository.
 
 ---
 
+## v1.0.1 — refunding no longer moves the list
+
+### Fixed
+
+- **The claims list no longer jumps after a refund.** Refunding a claim used to
+  remove its row, which renumbered every row below it and scrolled the table back
+  to the top. The next click could therefore land on a different claim than the
+  one the streamer was looking at.
+- **The selected reward no longer changes by itself.** The selection used to be
+  stored as a position in the reward list, so when a reward dropped out of the
+  list after its last claim was refunded, every position below it shifted and the
+  panel showed a neighbouring reward while appearing unchanged. Selection is now
+  tracked by the reward itself.
+- Refunded claims stay in the table, dimmed, with their button disabled. This
+  keeps the rows in place and shows what was done in the current pass; the reward
+  counter shows how many are left and how many were already refunded.
+- The scroll position of both columns is preserved across a refund.
+- Fixed two messages that mixed straight and typographic quotation marks.
+
+### Notes
+
+- An already refunded claim is still protected against a second refund: the row
+  is marked, the button is disabled, and a request in flight blocks another one.
+
+---
+
 ## v1.0.0 — first public release
 
 ### What it does

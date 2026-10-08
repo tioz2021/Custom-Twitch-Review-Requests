@@ -16,7 +16,7 @@
   // Version tag: Chrome caches the injected script under an unchanging URL, so
   // after edits it is easy to get a mix of an old injected.js and a new content.js.
   // Check in the console: __TPR_VERSION
-  const TPR_VERSION = '2026-10-07.10';
+  const TPR_VERSION = '2026-10-08.1';
   window.__TPR_VERSION = TPR_VERSION;
 
   const GQL_URL = 'https://gql.twitch.tv/gql';
@@ -358,7 +358,7 @@
       try {
         const r = await attempt(ops, a.mode, a.useCapturedHeaders, a.withCredentials, a.skipIntegrity);
         if (a.mode !== attempts[0].mode) {
-          console.warn(TAG, 'the request only succeeded in mode "' + a.mode + '»');
+          console.warn(TAG, 'the request only succeeded in mode "' + a.mode + '"');
         }
         return r.data;
       } catch (e) {

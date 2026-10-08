@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Custom Twitch Review Requests",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Search a viewer's claims in the Twitch channel points reward queue and refund individual claims. No API keys: it uses your existing session only.",
   "icons": {
     "16": "icons/icon16.png",

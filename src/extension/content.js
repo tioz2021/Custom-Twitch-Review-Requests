@@ -21,7 +21,7 @@
    * injected script under an unchanging URL, so after an update it is easy to
    * end up with a mix of an old injected.js and a new content.js. If the
    * versions diverge, the panel says so. */
-  const TPR_VERSION = '2026-10-07.10';
+  const TPR_VERSION = '2026-10-08.1';
   const SCAN_DELAY_MS = 120;   // delay between pagination requests
   const USERS_PER_BATCH = 25;  // UserWithBadges operations per HTTP request
   const USERS_BATCH_DELAY = 200;
@@ -156,7 +156,7 @@
     // search result
     viewer: null,             // { id, displayName, login, foundByQueue }
     viewerRedemptions: [],
-    selectedCat: -1,          // reward selected in the left column (-1 = overview)
+    selectedKey: '',          // reward selected in the left column ('' = overview)
     lastQuery: '',
     // Refund confirmation is on by default: the action is irreversible and Twitch
     // shows no dialog of its own. The choice is remembered between page loads.
@@ -247,12 +247,14 @@
     return updated;
   }
 
-  // Removes a claim from local data after a successful refund, so that it is not
-  // counted again on the next search.
-  function forgetRedemption(id) {
-    state.redemptions = state.redemptions.filter((r) => r.id !== id);
-    state.viewerRedemptions = state.viewerRedemptions.filter((r) => r.id !== id);
-    seenRedemptionIds.delete(id);
+  /* How many claims in a set have already been refunded in this session.
+   *
+   * Note what is deliberately NOT here: a function that deletes a refunded claim
+   * from the local data. That is what caused the list to jump — removing a row
+   * renumbers the ones below it. Refunded claims stay in the data, flagged, and
+   * are filtered out only where a count is shown. */
+  function refundedCount(items) {
+    return items.filter((r) => r.refunded).length;
   }
 
   /* ------------------------------------------------------------------ */
@@ -799,9 +801,13 @@
       redemption.refundError = '';
       redemption.status = (updated && updated.status) || 'CANCELED';
       console.info(TAG, 'points refunded for claim', redemption.id);
-      // The claim is processed — drop it from the list to avoid confusion
-      forgetRedemption(redemption.id);
-      setStatus('Points refunded. The claim was removed from the list.', 'ok');
+      /* The claim stays in the table, marked as refunded.
+       *
+       * It used to be removed here, which renumbered every row below it and made
+       * the list appear to jump to an arbitrary claim right after a refund. The
+       * row is kept so the layout stays put, the button is disabled so it cannot
+       * be refunded twice, and the streamer can see what was done in this pass. */
+      setStatus('Points refunded for this claim.', 'ok');
     } catch (e) {
       redemption.refundError = String(e && (e.detail || e.message) || e);
       console.warn(TAG, 'could not refund claim ' + redemption.id, e);
@@ -975,9 +981,9 @@
     }
 
     state.lastQuery = raw.toLowerCase();
-    state.selectedCat = -1;   // a new search starts from the reward overview
+    state.selectedKey = '';   // a new search starts from the reward overview
     setSearchEnabled(false);
-    setResultMessage('Searching for "' + raw + '»…', 'work');
+    setResultMessage('Searching for "' + raw + '"…', 'work');
 
     try {
       const norm = raw.replace(/^@/, '').toLowerCase();
@@ -1061,7 +1067,21 @@
 
   /* ---------- left column ---------- */
 
+  /* The rows of a reward that still need refunding.
+   *
+   * A claim that was just refunded stays in the list with its refunded flag set
+   * rather than being deleted. Deleting it renumbers every row below it, which
+   * pushes the row under the cursor somewhere else — the list appears to jump to
+   * an arbitrary claim right after a refund. Keeping the row keeps the layout
+   * still, and it also shows the streamer what was already done in this pass. */
+  function activeItems(items) {
+    return items.filter((r) => !r.refunded);
+  }
+
   function renderSide() {
+    // The scroll position is restored after the rebuild, otherwise refunding a
+    // claim scrolls the reward column back to the top.
+    const sideScroll = el.side.scrollTop;
     el.side.innerHTML = '';
 
     if (!state.viewer) {
@@ -1073,6 +1093,7 @@
 
     const items = state.viewerRedemptions;
     const groups = groupByReward(items);
+    const active = activeItems(items);
 
     /* viewer summary */
     const card = h('div', 'tpr-viewer');
@@ -1083,7 +1104,7 @@
         { fontSize: '11px', lineHeight: '1.3', color: '#adadb8' }));
     }
     card.appendChild(txt(h('div', 'tpr-viewer-count',
-      fmt(items.length) + ' ' + plural(items.length, 'claim') +
+      fmt(active.length) + ' ' + plural(active.length, 'claim') +
       ' · ' + groups.length + ' ' + plural(groups.length, 'reward')),
       { fontSize: '11px', lineHeight: '1.3', color: '#d9c7ff', marginTop: '4px' }));
     el.side.appendChild(card);
@@ -1103,25 +1124,38 @@
         letterSpacing: '.04em', margin: '10px 0 6px 0' }));
 
     const list = h('div', 'tpr-rewards');
-    groups.forEach((g, idx) => {
-      const item = h('button', 'tpr-reward' + (idx === state.selectedCat ? ' tpr-reward-active' : ''));
+    groups.forEach((g) => {
+      /* Selection is tracked by the reward key, not by the position in the list.
+       * By index it broke as soon as the list changed: a refund that empties a
+       * reward removes it, every later index shifts by one, and the panel ends
+       * up showing a different reward while looking like nothing moved. */
+      const isActive = g.key === state.selectedKey;
+      const open = activeItems(g.items);
+      const item = h('button', 'tpr-reward' + (isActive ? ' tpr-reward-active' : ''));
       item.appendChild(txt(h('div', 'tpr-reward-title', g.title),
         { fontSize: '13px', lineHeight: '1.3', fontWeight: '600', color: '#ffffff' }));
       item.appendChild(txt(h('div', 'tpr-reward-count',
-        g.items.length + ' ' + plural(g.items.length, 'claim')),
+        open.length + ' ' + plural(open.length, 'claim') +
+        (refundedCount(g.items) ? ' · ' + refundedCount(g.items) + ' refunded' : '')),
         { fontSize: '11px', lineHeight: '1.3', color: '#adadb8', marginTop: '2px' }));
       item.addEventListener('click', () => {
-        state.selectedCat = idx;
+        state.selectedKey = g.key;
         renderResult();
       });
       list.appendChild(item);
     });
     el.side.appendChild(list);
+
+    el.side.scrollTop = sideScroll;
   }
 
   /* ---------- right column ---------- */
 
   function renderMain() {
+    // Restored at the end of this function, after the table is rebuilt.
+    const wrap = el.main.querySelector('.tpr-table-wrap');
+    const mainScroll = wrap ? wrap.scrollTop : 0;
+
     el.main.innerHTML = '';
 
     if (!state.viewer) {
@@ -1132,7 +1166,9 @@
 
     const items = state.viewerRedemptions;
     const groups = groupByReward(items);
-    const group = groups[state.selectedCat];
+    // Looked up by key, not by position: after a refund the list can change
+    // shape, and an index would silently point at a different reward.
+    const group = groups.find((g) => g.key === state.selectedKey);
 
     if (!items.length) {
       el.main.appendChild(txt(h('div', 'tpr-empty', 'The viewer has no unfulfilled claims.'),
@@ -1149,15 +1185,17 @@
         { fontSize: '12px', lineHeight: '1.4', color: '#adadb8', marginTop: '4px' }));
 
       const overview = h('div', 'tpr-rewards');
-      groups.forEach((g, idx) => {
+      groups.forEach((g) => {
+        const open = activeItems(g.items);
         const row = h('button', 'tpr-reward tpr-reward-wide');
         row.appendChild(txt(h('span', 'tpr-reward-title', g.title),
           { display: 'inline-block', fontSize: '13px', lineHeight: '1.3', fontWeight: '600', color: '#ffffff' }));
         row.appendChild(txt(h('span', 'tpr-reward-count',
-          g.items.length + ' ' + plural(g.items.length, 'claim')),
+          open.length + ' ' + plural(open.length, 'claim') +
+          (refundedCount(g.items) ? ' · ' + refundedCount(g.items) + ' refunded' : '')),
           { display: 'inline-block', float: 'right', fontSize: '12px', lineHeight: '1.3', color: '#adadb8' }));
         row.addEventListener('click', () => {
-          state.selectedCat = idx;
+          state.selectedKey = g.key;
           renderResult();
         });
         overview.appendChild(row);
@@ -1166,18 +1204,21 @@
       return;
     }
 
+    const open = activeItems(group.items);
+
     /* header of the selected reward */
     const head = h('div', 'tpr-main-head');
     head.appendChild(txt(h('div', 'tpr-main-title', group.title),
       { fontSize: '16px', lineHeight: '1.3', fontWeight: '700', color: '#ffffff' }));
     head.appendChild(txt(h('div', 'tpr-main-sub',
-      group.items.length + ' ' + plural(group.items.length, 'claim') +
-      ' — each can be refunded separately'),
+      open.length + ' ' + plural(open.length, 'claim') +
+      ' — each can be refunded separately' +
+      (refundedCount(group.items) ? ' (' + refundedCount(group.items) + ' already refunded)' : '')),
       { fontSize: '12px', lineHeight: '1.4', color: '#adadb8', marginTop: '4px' }));
 
     const back = h('button', 'tpr-btn tpr-btn-small tpr-btn-ghost', 'All rewards');
     back.addEventListener('click', () => {
-      state.selectedCat = -1;
+      state.selectedKey = '';
       renderResult();
     });
     head.appendChild(back);
@@ -1195,26 +1236,35 @@
     table.appendChild(thead);
 
     const tbody = h('tbody');
+    /* Every claim keeps its place in the table, and the row number is tied to
+     * that place rather than to the position among unrefunded claims. Renumbering
+     * after each refund is what made the list look like it jumped to a random
+     * claim. Already refunded rows stay visible, dimmed, so the streamer can see
+     * what was done in this pass. */
     group.items.forEach((r, i) => {
       const tr = h('tr');
+      if (r.refunded) tr.className = 'tpr-row-refunded';
+
       tr.appendChild(txt(h('td', 'tpr-td-num', String(i + 1)),
-        { textAlign: 'right', color: '#7d7d8a' }));
+        { textAlign: 'right', color: r.refunded ? '#4a4a55' : '#7d7d8a' }));
 
       tr.appendChild(txt(h('td', 'tpr-td-date', fmtDate(r.timestamp)),
-        { whiteSpace: 'nowrap', color: '#adadb8' }));
+        { whiteSpace: 'nowrap', color: r.refunded ? '#4a4a55' : '#adadb8' }));
 
-      const tdInput = txt(h('td', 'tpr-td-input'), { color: '#b9b9c4' });
+      const tdInput = txt(h('td', 'tpr-td-input'), { color: r.refunded ? '#4a4a55' : '#b9b9c4' });
       if (r.input) {
         tdInput.textContent = String(r.input);
         tdInput.title = String(r.input);
       } else {
-        tdInput.appendChild(txt(h('span', 'tpr-muted', '—'), { color: '#5c5c68' }));
+        tdInput.appendChild(txt(h('span', 'tpr-muted', '—'),
+          { color: r.refunded ? '#4a4a55' : '#5c5c68' }));
       }
       tr.appendChild(tdInput);
 
       if (state.showIds) {
         tr.appendChild(txt(h('td', 'tpr-td-id', r.id),
-          { fontFamily: 'Consolas, "Courier New", monospace', fontSize: '11px', color: '#7d7d8a', whiteSpace: 'nowrap' }));
+          { fontFamily: 'Consolas, "Courier New", monospace', fontSize: '11px',
+            color: r.refunded ? '#4a4a55' : '#7d7d8a', whiteSpace: 'nowrap' }));
       }
 
       /* Refund button for a single claim.
@@ -1241,9 +1291,12 @@
     });
     table.appendChild(tbody);
 
-    const wrap = h('div', 'tpr-table-wrap');
-    wrap.appendChild(table);
-    el.main.appendChild(wrap);
+    const tableWrap = h('div', 'tpr-table-wrap');
+    tableWrap.appendChild(table);
+    el.main.appendChild(tableWrap);
+    // Put the claims list back where it was. Without this the whole table is at
+    // the top again after every refund, which reads as "the panel jumped".
+    tableWrap.scrollTop = mainScroll;
 
     /* a tidy path to manual moderation in Twitch's own panel */
     const openOnPage = h('button', 'tpr-btn tpr-btn-small tpr-btn-ghost', 'Show this reward in the Twitch panel');
